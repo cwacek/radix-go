@@ -93,9 +93,14 @@ func TestInsert(t *testing.T) {
   Assert(t, found, true, "Couldn't find 'james'")
   Assert(t, val.(test_entry).Val, "different", "Found incorrect value for 'james'")
 
+  val, found = radix.Find([]byte("a"))
+  Assert(t, found, false, "Couldn't find 'a'")
+  radix.Insert(test_entry{ []byte("a"), "different" })
+
   radix.Insert(test_entry{ []byte("freddie"), "kruger" })
 
   expected := []test_entry{
+    test_entry{[]byte("a"), "different"},
     test_entry{[]byte("freddie"), "kruger"},
     test_entry{[]byte("james"), "different"},
     test_entry{[]byte("janice"), 4},

@@ -128,20 +128,26 @@ append elements to the tree until the correct one exists. Otherwise return nil
 if the element doesn't exist.*/
 func (n *node) find(key []byte, extend bool) (*node, bool) {
 
-  log.Debugf("Called find with key %s at node %v", key, n)
-  log.Flush()
-
   var(
     elem *node
     k byte
     leftover []byte
   )
 
+  if n.Key == 0 {
+    log.Debugf("Called find with key %s at root", key)
+  } else {
+    log.Debugf("Called find with key %s at node %c", key, n.Key)
+  }
+  log.Flush()
+
   k = key[0]
   leftover = key[1:]
 
   log.Debugf("Subkey is '%s' with len %d", leftover, len(leftover))
-  if len(leftover) == 0 {
+  if len(leftover) == 0 && n.Key != 0{
+    // This is only the stopping point if we're not at the root.
+    // At the root we need to go down one mroe
     log.Debugf("Returning %v", n)
     return n, true
   }
@@ -160,10 +166,14 @@ func (n *node) find(key []byte, extend bool) (*node, bool) {
     }
   }
 
-  log.Debugf("Searching subtree for key '%s'.", leftover)
-  subelem, found := elem.find(leftover, extend)
+  if len(leftover) > 0 {
+    log.Debugf("Searching subtree for key '%s'.", leftover)
+    subelem, found := elem.find(leftover, extend)
   log.Debugf("Subtree search found %v. Success: %s", subelem,found)
   return subelem, found
+  } else {
+  return elem, true
+}
 }
 
 func (n *Trie) Find(key []byte) (RadixTreeEntry, bool) {
