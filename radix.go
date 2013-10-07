@@ -1,30 +1,85 @@
 package radix
 
 import log "github.com/cihub/seelog"
+import "sync"
+import "sort"
 
-type RadixTree interface {
-  Insert([]byte, interface{}) bool
-  Find([]byte) (interface{}, bool)
-  Len() int
+type RadixTreeEntry interface {
+  RadixKey() []byte
 }
 
-func NewRadixTree() RadixTree {
-  node := new(radix_tree)
+type RadixTree interface {
+  Insert(RadixTreeEntry) bool
+  Find([]byte) (RadixTreeEntry, bool)
+  Len() int
+  Walk() []RadixTreeEntry
+}
+
+func NewTrie() RadixTree {
+  node := new(Trie)
   node.Init()
   return node
 }
 
-type radix_tree struct {
+type ByteSlice []byte
+
+func (this ByteSlice) Len() int { return len(this) }
+func (this ByteSlice) Less(i, j int) bool { return this[i] < this[j] }
+func (this ByteSlice) Swap(i, j int) {
+  tmp := this[i]
+  this[i] = this[j]
+  this[j] = tmp
+}
+
+
+type Trie struct {
   elemcount int
   root *node
+  walklock *sync.RWMutex
 }
 
 type node struct {
   Key byte
-  Value interface{}
+  Value RadixTreeEntry
   subtrees map[byte]*node
   elemcount int
 }
+
+// Walk a tree, and push all of the elements
+// in it into the channel in sorted order
+func (n *Trie) Walk() (elems []RadixTreeEntry) {
+  elems = make([]RadixTreeEntry, 0, n.elemcount)
+  n.root.walk(&elems)
+  return elems
+}
+
+func (n *node) walk(elemList *[]RadixTreeEntry) {
+
+  if n.Value != nil {
+    log.Debugf("Sending value %v", n.Value)
+    *elemList = append(*elemList, n.Value)
+  }
+
+  if len(n.subtrees) == 0 {
+    log.Debugf("Stopping recursion. No sub elements.")
+    return
+  }
+
+  // Recurse in order
+  var keys ByteSlice
+
+  for key := range n.subtrees {
+    keys = append(keys, key)
+  }
+
+  sort.Sort(keys)
+
+  for _, key := range keys {
+    log.Debugf("Recursing to %c", key)
+    n.subtrees[key].walk(elemList)
+  }
+}
+
 
 func (n *node) Init(key byte) {
   n.subtrees = make(map[byte]*node)
@@ -32,35 +87,39 @@ func (n *node) Init(key byte) {
   n.Value = nil
 }
 
-func (T *radix_tree) Init() {
+func (T *Trie) Init() {
   T.elemcount = 0
+  T.walklock = new(sync.RWMutex)
   T.root = new(node)
   T.root.Init(0)
 }
 
-func (T *radix_tree) Insert(key []byte, val interface{}) (added bool) {
+func (T *Trie) Insert(r RadixTreeEntry) (added bool) {
+  T.walklock.Lock()
 
-  log.Debugf("Inserting with '%v' at key %s", val, key)
+  log.Debugf("Inserting with '%v' at key %s", r, r.RadixKey())
 
-  elem, found := T.root.find(key, true)
+  elem, found := T.root.find(r.RadixKey(), true)
 
   log.Debugf("Inserting into %v, which has value %v", elem, elem.Value)
 
   if ! found {
+    T.walklock.Unlock()
     panic("Couldn't find key when extending")
   }
 
   if elem.Value == nil {
-    log.Debugf("'%v' has value. Replacing it with '%v'",elem, val)
-    elem.Value = val
+    log.Debugf("'%v' has value. Replacing it with '%v'",elem, r)
+    elem.Value = r
     added = true
     T.elemcount += 1
 
   } else {
-    elem.Value = val
+    elem.Value = r
     added = false
   }
   log.Debugf("elemcount is now %d", T.elemcount)
+  T.walklock.Unlock()
   return
 }
 
@@ -107,7 +166,7 @@ func (n *node) find(key []byte, extend bool) (*node, bool) {
   return subelem, found
 }
 
-func (n *radix_tree) Find(key []byte) (interface {}, bool) {
+func (n *Trie) Find(key []byte) (RadixTreeEntry, bool) {
 
   if n.root == nil {
     return nil, false
@@ -127,7 +186,7 @@ func (n *radix_tree) Find(key []byte) (interface {}, bool) {
   return elem.Value, true
 }
 
-func (T *radix_tree) Len() int {
+func (T *Trie) Len() int {
   return T.elemcount
 }
 

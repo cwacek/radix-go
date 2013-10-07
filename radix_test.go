@@ -2,6 +2,7 @@ package radix
 
 import "testing"
 import "fmt"
+import "bytes"
 import log "github.com/cihub/seelog"
 
 func SetupTestLogging() {
@@ -45,6 +46,15 @@ func  Assert(t *testing.T, expected interface{}, actual interface{}, msg string)
   }
 }
 
+type test_entry struct{
+  Key []byte
+  Val interface{}
+}
+
+func (t test_entry) RadixKey() []byte {
+  return t.Key
+}
+
 func TestInsert(t *testing.T) {
   SetupTestLogging()
 
@@ -54,34 +64,49 @@ func TestInsert(t *testing.T) {
   )
 
 
-  radix := NewRadixTree()
+  radix := NewTrie()
 
   Assert(t, radix.Len(), 0, "Length mismatch")
 
-  radix.Insert([]byte("james"), 4)
+  radix.Insert(test_entry{[]byte("james"), 4})
 
   Assert(t, radix.Len(), 1, "Length mismatch")
   val, found = radix.Find([]byte("james"))
   Assert(t, found, true, "Couldn't find 'james'")
-  Assert(t, val, 4, "Found incorrect value for 'james'")
+  Assert(t, val.(test_entry).Val, 4, "Found incorrect value for 'james'")
 
-  radix.Insert([]byte("janice"), 4)
+  radix.Insert(test_entry{ []byte("janice"), 4 })
 
   Assert(t, radix.Len(), 2, "Length mismatch")
 
   val, found = radix.Find([]byte("janice"))
   Assert(t, found, true, "Couldn't find 'janice'")
-  Assert(t, val, 4, "Found incorrect value for 'janice'")
+  Assert(t, val.(test_entry).Val, 4, "Found incorrect value for 'janice'")
 
   val, found = radix.Find([]byte("james"))
   Assert(t, found, true, "Couldn't find 'james'")
-  Assert(t, val, 4, "Found incorrect value for 'james'")
+  Assert(t, val.(test_entry).Val, 4, "Found incorrect value for 'james'")
 
-  radix.Insert([]byte("james"), "different")
+  radix.Insert(test_entry{ []byte("james"), "different" })
 
   val, found = radix.Find([]byte("james"))
   Assert(t, found, true, "Couldn't find 'james'")
-  Assert(t, val, "different", "Found incorrect value for 'james'")
+  Assert(t, val.(test_entry).Val, "different", "Found incorrect value for 'james'")
+
+  radix.Insert(test_entry{ []byte("freddie"), "kruger" })
+
+  expected := []test_entry{
+    test_entry{[]byte("freddie"), "kruger"},
+    test_entry{[]byte("james"), "different"},
+    test_entry{[]byte("janice"), 4},
+  }
+
+  entries := radix.Walk()
+  for i, entry := range entries {
+    if bytes.Compare(entry.RadixKey(), expected[i].Key) != 0 {
+      t.Errorf("Error when walking: %s != %s at position %d", entry, expected[i], i)
+    }
+  }
 
 }
 
