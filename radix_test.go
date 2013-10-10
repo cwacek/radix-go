@@ -1,6 +1,8 @@
 package radix
 
 import "testing"
+import "math/rand"
+import "strconv"
 import "fmt"
 import "bytes"
 import log "github.com/cihub/seelog"
@@ -111,6 +113,21 @@ func TestInsert(t *testing.T) {
     if bytes.Compare(entry.RadixKey(), expected[i].Key) != 0 {
       t.Errorf("Error when walking: %s != %s at position %d", entry, expected[i], i)
     }
+  }
+
+}
+
+func BulkLoadTest(t *testing.T) {
+
+  var T test_entry
+
+  radix := NewTrie()
+
+  for i := 0; i < 100000; i++ {
+
+    T = test_entry{[]byte(strconv.Itoa(rand.Intn(200000))), "What"}
+
+    radix.Insert(T)
   }
 
 }
