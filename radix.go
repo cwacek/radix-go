@@ -123,41 +123,48 @@ if the element doesn't exist.*/
 func (n *node) find(key []byte, extend bool) (elem *node, ok bool) {
 
   var(
-    k byte
+    k int
     leftover []byte
+    N *node
   )
 
-  k = key[0]
-  leftover = key[1:]
+    k = 0
+    leftover = key[k:]
+    N = n
+    //Get below the root
 
-  log.Debugf("Subkey is '%s' with len %d", leftover, len(leftover))
-  if len(leftover) == 0 && n.Key != 0{
-    // This is only the stopping point if we're not at the root.
-    // At the root we need to go down one mroe
-    log.Debugf("Returning %v", n)
-    return n, true
-  }
+    for ; k < len(key); k++ {
+      leftover = key[k+1:]
 
-  elem, ok = n.subtrees[k]
-  if !ok {
-    if ! extend {
-      log.Debugf("Didn't find subkey %s", k)
-      return nil, false
+      log.Debugf("Subkey is '%s' with len %d", leftover, len(leftover))
+      if len(leftover) == 0 && N.Key != 0 {
+        // This is only the stopping point if we're not at the root.
+        // At the root we need to go down one mroe
+        log.Debugf("Returning %v", n)
+        return N, true
+      }
 
-    } else {
-      elem = new(node)
-      elem.Init(k)
-      log.Debugf("Creating new subnode %v with Key %s", elem, elem.Key)
-      n.subtrees[k] = elem
-      ok = true
+      elem, ok = N.subtrees[key[k]]
+      if !ok {
+        if ! extend {
+          log.Debugf("Didn't find subkey %s", k)
+          return nil, false
+
+        } else {
+          elem = new(node)
+          elem.Init(key[k])
+          log.Debugf("Creating new subnode %v with Key %s", elem, elem.Key)
+          N.subtrees[key[k]] = elem
+          N = elem
+          continue
+        }
+      }
+
+      N = elem
+
     }
-  }
 
-  if len(leftover) > 0 {
-    log.Debugf("Searching subtree for key '%s'.", leftover)
-    elem, ok = elem.find(leftover, extend)
-  }
-  return
+    return N, true
 }
 
 func (n *Trie) Find(key []byte) (RadixTreeEntry, bool) {
