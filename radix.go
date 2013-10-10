@@ -1,7 +1,6 @@
 package radix
 
 import log "github.com/cihub/seelog"
-import "sync"
 import "sort"
 
 type RadixTreeEntry interface {
@@ -35,7 +34,6 @@ func (this ByteSlice) Swap(i, j int) {
 type Trie struct {
   elemcount int
   root *node
-  walklock *sync.RWMutex
 }
 
 type node struct {
@@ -89,13 +87,11 @@ func (n *node) Init(key byte) {
 
 func (T *Trie) Init() {
   T.elemcount = 0
-  T.walklock = new(sync.RWMutex)
   T.root = new(node)
   T.root.Init(0)
 }
 
 func (T *Trie) Insert(r RadixTreeEntry) (added bool) {
-  T.walklock.Lock()
 
   log.Debugf("Inserting with '%v' at key %s", r, r.RadixKey())
 
@@ -104,12 +100,11 @@ func (T *Trie) Insert(r RadixTreeEntry) (added bool) {
   log.Debugf("Inserting into %v, which has value %v", elem, elem.Value)
 
   if ! found {
-    T.walklock.Unlock()
     panic("Couldn't find key when extending")
   }
 
   if elem.Value == nil {
-    log.Debugf("'%v' has value. Replacing it with '%v'",elem, r)
+    /*log.Debugf("'%v' has value. Replacing it with '%v'",elem, r)*/
     elem.Value = r
     added = true
     T.elemcount += 1
@@ -119,27 +114,18 @@ func (T *Trie) Insert(r RadixTreeEntry) (added bool) {
     added = false
   }
   log.Debugf("elemcount is now %d", T.elemcount)
-  T.walklock.Unlock()
   return
 }
 
 /* Find the element with key 'key'. If extend is true, 
 append elements to the tree until the correct one exists. Otherwise return nil
 if the element doesn't exist.*/
-func (n *node) find(key []byte, extend bool) (*node, bool) {
+func (n *node) find(key []byte, extend bool) (elem *node, ok bool) {
 
   var(
-    elem *node
     k byte
     leftover []byte
   )
-
-  if n.Key == 0 {
-    log.Debugf("Called find with key %s at root", key)
-  } else {
-    log.Debugf("Called find with key %s at node %c", key, n.Key)
-  }
-  log.Flush()
 
   k = key[0]
   leftover = key[1:]
@@ -152,10 +138,10 @@ func (n *node) find(key []byte, extend bool) (*node, bool) {
     return n, true
   }
 
-  elem, ok := n.subtrees[k]
+  elem, ok = n.subtrees[k]
   if !ok {
     if ! extend {
-      log.Debugf("Didn't find subkey %s in skiplist", k)
+      log.Debugf("Didn't find subkey %s", k)
       return nil, false
 
     } else {
@@ -163,17 +149,15 @@ func (n *node) find(key []byte, extend bool) (*node, bool) {
       elem.Init(k)
       log.Debugf("Creating new subnode %v with Key %s", elem, elem.Key)
       n.subtrees[k] = elem
+      ok = true
     }
   }
 
   if len(leftover) > 0 {
     log.Debugf("Searching subtree for key '%s'.", leftover)
-    subelem, found := elem.find(leftover, extend)
-  log.Debugf("Subtree search found %v. Success: %s", subelem,found)
-  return subelem, found
-  } else {
-  return elem, true
-}
+    elem, ok = elem.find(leftover, extend)
+  }
+  return
 }
 
 func (n *Trie) Find(key []byte) (RadixTreeEntry, bool) {
