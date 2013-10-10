@@ -117,7 +117,7 @@ func TestInsert(t *testing.T) {
 
 }
 
-func BulkLoadTest(t *testing.T) {
+func TestRapidIteration(t *testing.T) {
 
   var T test_entry
 
@@ -125,7 +125,7 @@ func BulkLoadTest(t *testing.T) {
 
   for i := 0; i < 100000; i++ {
 
-    T = test_entry{[]byte(strconv.Itoa(rand.Intn(200000))), "What"}
+    T = test_entry{[]byte(strconv.Itoa(rand.Intn(200000000000))), "What"}
 
     radix.Insert(T)
   }
