@@ -42,7 +42,7 @@ if testing.Verbose() {
 	log.ReplaceLogger(logger)
 }
 
-func  Assert(t *testing.T, expected interface{}, actual interface{}, msg string) {
+func  Assert(t *testing.T, actual interface{}, expected interface{}, msg string) {
   if expected != actual {
     t.Errorf("%s. %v != %v", msg, expected, actual)
   }
@@ -117,13 +117,13 @@ func TestInsert(t *testing.T) {
 
 }
 
-func TestRapidIteration(t *testing.T) {
+func BenchmarkRapidIteration(b *testing.B) {
 
   var T test_entry
 
   radix := NewTrie()
 
-  for i := 0; i < 100000; i++ {
+  for i := 0; i < b.N; i++ {
 
     T = test_entry{[]byte(strconv.Itoa(rand.Intn(200000000000))), "What"}
 

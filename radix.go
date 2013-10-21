@@ -37,7 +37,7 @@ type Trie struct {
 }
 
 type node struct {
-  Key byte
+  Key []byte
   Value RadixTreeEntry
   subtrees map[byte]*node
   elemcount int
@@ -79,7 +79,7 @@ func (n *node) walk(elemList *[]RadixTreeEntry) {
 }
 
 
-func (n *node) Init(key byte) {
+func (n *node) Init(key []byte) {
   n.subtrees = make(map[byte]*node)
   n.Key = key
   n.Value = nil
@@ -88,7 +88,7 @@ func (n *node) Init(key byte) {
 func (T *Trie) Init() {
   T.elemcount = 0
   T.root = new(node)
-  T.root.Init(0)
+  T.root.Init(nil)
 }
 
 func (T *Trie) Insert(r RadixTreeEntry) (added bool) {
@@ -124,42 +124,74 @@ func (n *node) find(key []byte, extend bool) (elem *node, ok bool) {
 
   var(
     k int
-    leftover []byte
     N *node
   )
 
-    k = 0
-    leftover = key[k:]
     N = n
+    k = 1
     //Get below the root
+    elem, ok = N.subtrees[key[0]]
+    switch {
+    case ok:
+      N = elem
 
-    for ; k < len(key); k++ {
-      leftover = key[k+1:]
+    case !ok && extend:
+      elem = new(node)
+      elem.Init(key[1:])
+      N.subtrees[key[0]] = elem
+      N = elem
 
-      log.Debugf("Subkey is '%s' with len %d", leftover, len(leftover))
-      if len(leftover) == 0 && N.Key != 0 {
+    case !ok:
+      return nil, false
+    }
+
+    for ; k < len(key); {
+      var i int
+      for i = 0; k + i < len(key) && i < len(N.Key) && key[k + i] == N.Key[i]; i++ {
+        /*log.Debugf("%c matches at position %d", key[k+i], i)*/
+      }
+      /*log.Debugf("k=%d, i=%d, key=%s, N.Key=%s", k, i, key[k:], N.Key)*/
+
+      if i < len(N.Key) {
+        //Split this node.
+        /*log.Debugf("Splitting the current node to have key %s with new subtree starting at %v with value %s", N.Key[:i], N.Key[i], N.Key[i:])*/
+        elem = new(node)
+        elem.Init(N.Key[i:])
+        elem.Value = N.Value
+        N.Value = nil
+
+        N.subtrees[N.Key[i]] = elem
+        N.Key = N.Key[:i]
+      }
+
+      /*log.Debugf("Subkey is '%s' at %s",*/
+      /*key[k+i:], N.Key)*/
+      if k + i == len(key) && N.Key != nil {
         // This is only the stopping point if we're not at the root.
         // At the root we need to go down one mroe
-        log.Debugf("Returning %v", n)
+        /*log.Debugf("Returning %v", N)*/
         return N, true
       }
 
-      elem, ok = N.subtrees[key[k]]
+      /*log.Debugf("Looking for %v in subtrees: %v", key[k+i], N.subtrees)*/
+
+      elem, ok = N.subtrees[key[k+i]]
       if !ok {
         if ! extend {
-          log.Debugf("Didn't find subkey %s", k)
+          /*log.Debugf("Didn't find subkey %s", k)*/
           return nil, false
 
         } else {
           elem = new(node)
-          elem.Init(key[k])
-          log.Debugf("Creating new subnode %v with Key %s", elem, elem.Key)
-          N.subtrees[key[k]] = elem
+          elem.Init(key[k+i:])
+          /*log.Debugf("Creating new subnode %v with Key %s", elem, elem.Key)*/
+          N.subtrees[key[k+i]] = elem
           N = elem
-          continue
+          break
         }
       }
 
+      k += len(N.Key)
       N = elem
 
     }
