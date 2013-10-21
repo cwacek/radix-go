@@ -136,24 +136,24 @@ func (n *node) find(key []byte, extend bool) (elem *node, ok bool) {
     for ; k < len(key); k++ {
       leftover = key[k+1:]
 
-      log.Debugf("Subkey is '%s' with len %d", leftover, len(leftover))
+      /*log.Debugf("Subkey is '%s' with len %d", leftover, len(leftover))*/
       if len(leftover) == 0 && N.Key != 0 {
         // This is only the stopping point if we're not at the root.
         // At the root we need to go down one mroe
-        log.Debugf("Returning %v", n)
+        /*log.Debugf("Returning %v", n)*/
         return N, true
       }
 
       elem, ok = N.subtrees[key[k]]
       if !ok {
         if ! extend {
-          log.Debugf("Didn't find subkey %s", k)
+          /*log.Debugf("Didn't find subkey %s", k)*/
           return nil, false
 
         } else {
           elem = new(node)
           elem.Init(key[k])
-          log.Debugf("Creating new subnode %v with Key %s", elem, elem.Key)
+          /*log.Debugf("Creating new subnode %v with Key %s", elem, elem.Key)*/
           N.subtrees[key[k]] = elem
           N = elem
           continue
