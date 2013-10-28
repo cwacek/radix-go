@@ -54,12 +54,12 @@ func (n *Trie) Walk() (elems []RadixTreeEntry) {
 func (n *node) walk(elemList *[]RadixTreeEntry) {
 
   if n.Value != nil {
-    log.Debugf("Sending value %v", n.Value)
+    log.Tracef("Sending value %v", n.Value)
     *elemList = append(*elemList, n.Value)
   }
 
   if len(n.subtrees) == 0 {
-    log.Debugf("Stopping recursion. No sub elements.")
+    log.Tracef("Stopping recursion. No sub elements.")
     return
   }
 
@@ -73,7 +73,7 @@ func (n *node) walk(elemList *[]RadixTreeEntry) {
   sort.Sort(keys)
 
   for _, key := range keys {
-    log.Debugf("Recursing to %c", key)
+    log.Tracef("Recursing to %c", key)
     n.subtrees[key].walk(elemList)
   }
 }
@@ -89,15 +89,16 @@ func (T *Trie) Init() {
   T.elemcount = 0
   T.root = new(node)
   T.root.Init(nil)
+  log.Critical("Initializing Trie")
 }
 
 func (T *Trie) Insert(r RadixTreeEntry) (added bool) {
 
-  log.Debugf("Inserting with '%v' at key %s", r, r.RadixKey())
+  log.Tracef("Inserting with '%v' at key %s", r, r.RadixKey())
 
   elem, found := T.root.find(r.RadixKey(), true)
 
-  log.Debugf("Inserting into %v, which has value %v", elem, elem.Value)
+  log.Tracef("Inserting into %v, which has value %v", elem, elem.Value)
 
   if ! found {
     panic("Couldn't find key when extending")
@@ -113,7 +114,7 @@ func (T *Trie) Insert(r RadixTreeEntry) (added bool) {
     elem.Value = r
     added = false
   }
-  log.Debugf("elemcount is now %d", T.elemcount)
+  log.Tracef("elemcount is now %d", T.elemcount)
   return
 }
 
@@ -148,13 +149,13 @@ func (n *node) find(key []byte, extend bool) (elem *node, ok bool) {
     for ; k < len(key); {
       var i int
       for i = 0; k + i < len(key) && i < len(N.Key) && key[k + i] == N.Key[i]; i++ {
-        /*log.Debugf("%c matches at position %d", key[k+i], i)*/
+        log.Tracef("%c matches at position %d", key[k+i], i)
       }
-      /*log.Debugf("k=%d, i=%d, key=%s, N.Key=%s", k, i, key[k:], N.Key)*/
+      log.Tracef("k=%d, i=%d, key=%s, N.Key=%s", k, i, key[k:], N.Key)
 
       if i < len(N.Key) {
         //Split this node.
-        /*log.Debugf("Splitting the current node to have key %s with new subtree starting at %v with value %s", N.Key[:i], N.Key[i], N.Key[i:])*/
+        log.Tracef("Splitting the current node to have key %s with new subtree starting at %v with value %s", N.Key[:i], N.Key[i], N.Key[i:])
         elem = new(node)
         elem.Init(N.Key[i:])
         elem.Value = N.Value
@@ -164,27 +165,27 @@ func (n *node) find(key []byte, extend bool) (elem *node, ok bool) {
         N.Key = N.Key[:i]
       }
 
-      /*log.Debugf("Subkey is '%s' at %s",*/
-      /*key[k+i:], N.Key)*/
+      log.Tracef("Subkey is '%s' at %s",
+      key[k+i:], N.Key)
       if k + i == len(key) && N.Key != nil {
         // This is only the stopping point if we're not at the root.
         // At the root we need to go down one mroe
-        /*log.Debugf("Returning %v", N)*/
+        log.Tracef("Returning %v", N)
         return N, true
       }
 
-      /*log.Debugf("Looking for %v in subtrees: %v", key[k+i], N.subtrees)*/
+      log.Tracef("Looking for %v in subtrees: %v", key[k+i], N.subtrees)
 
       elem, ok = N.subtrees[key[k+i]]
       if !ok {
         if ! extend {
-          /*log.Debugf("Didn't find subkey %s", k)*/
+          log.Tracef("Didn't find subkey %s", k)
           return nil, false
 
         } else {
           elem = new(node)
           elem.Init(key[k+i:])
-          /*log.Debugf("Creating new subnode %v with Key %s", elem, elem.Key)*/
+          log.Tracef("Creating new subnode %v with Key %s", elem, elem.Key)
           N.subtrees[key[k+i]] = elem
           N = elem
           break

@@ -101,6 +101,8 @@ func TestInsert(t *testing.T) {
 
   radix.Insert(test_entry{ []byte("freddie"), "kruger" })
 
+  Assert(t, radix.Len(), 4, "Length mismatch")
+
   expected := []test_entry{
     test_entry{[]byte("a"), "different"},
     test_entry{[]byte("freddie"), "kruger"},
