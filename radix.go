@@ -54,7 +54,7 @@ func (n *Trie) Walk() (elems []RadixTreeEntry) {
 func (n *node) walk(elemList *[]RadixTreeEntry) {
 
   if n.Value != nil {
-    log.Tracef("Sending value %v", n.Value)
+    log.Tracef("Sending value %#v", n.Value)
     *elemList = append(*elemList, n.Value)
   }
 
@@ -94,7 +94,7 @@ func (T *Trie) Init() {
 
 func (T *Trie) Insert(r RadixTreeEntry) (added bool) {
 
-  log.Tracef("Inserting with '%v' at key %s", r, r.RadixKey())
+  log.Debugf("Inserting with '%#v' at key %s", r, r.RadixKey())
 
   elem, found := T.root.find(r.RadixKey(), true)
 
@@ -170,7 +170,7 @@ func (n *node) find(key []byte, extend bool) (elem *node, ok bool) {
       if k + i == len(key) && N.Key != nil {
         // This is only the stopping point if we're not at the root.
         // At the root we need to go down one mroe
-        log.Tracef("Returning %v", N)
+        log.Tracef("Returning %#v", N)
         return N, true
       }
 
@@ -209,14 +209,14 @@ func (n *Trie) Find(key []byte) (RadixTreeEntry, bool) {
   log.Debugf("Asked to Find '%s'", key)
 
   elem, found := n.root.find(key, false)
-  log.Debugf("Found %v. Success: %s", elem, found)
+  log.Debugf("Found %#v. Success: %s", elem, found)
 
   if ! found {
     log.Debugf("Failed")
     return nil, false
   }
 
-  log.Debugf("Found elem %v", elem)
+  log.Debugf("Found elem %#v", elem)
   return elem.Value, true
 }
 
