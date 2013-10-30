@@ -100,14 +100,22 @@ func TestInsert(t *testing.T) {
   radix.Insert(test_entry{ []byte("a"), "different" })
 
   radix.Insert(test_entry{ []byte("freddie"), "kruger" })
+  val, found = radix.Find([]byte("fredie"))
+  Assert(t, found, false, "Found 'fredie' but shouldn't have")
 
   Assert(t, radix.Len(), 4, "Length mismatch")
+
+  radix.Insert(test_entry{ []byte("jimbo"), "kruger" })
+  val, found = radix.Find([]byte("jimbo"))
+  Assert(t, found, true, "Couldn't find 'jimbo'")
+  Assert(t, val.(test_entry).Val, "kruger", "Found incorrect value for 'jimbo'")
 
   expected := []test_entry{
     test_entry{[]byte("a"), "different"},
     test_entry{[]byte("freddie"), "kruger"},
     test_entry{[]byte("james"), "different"},
     test_entry{[]byte("janice"), 4},
+    test_entry{[]byte("jimbo"), "kruger"},
   }
 
   entries := radix.Walk()

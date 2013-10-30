@@ -47,19 +47,21 @@ type node struct {
 // in it into the channel in sorted order
 func (n *Trie) Walk() (elems []RadixTreeEntry) {
   elems = make([]RadixTreeEntry, 0, n.elemcount)
-  n.root.walk(&elems)
+  n.root.walk(&elems, []byte{})
   return elems
 }
 
-func (n *node) walk(elemList *[]RadixTreeEntry) {
+func (n *node) walk(elemList *[]RadixTreeEntry, currKey []byte) {
+
+  currKey = append(currKey, n.Key...)
 
   if n.Value != nil {
-    log.Tracef("Sending value %#v", n.Value)
+    log.Debugf("Sending value %#v at %s", n.Value, currKey)
     *elemList = append(*elemList, n.Value)
   }
 
   if len(n.subtrees) == 0 {
-    log.Tracef("Stopping recursion. No sub elements.")
+    log.Debugf("Stopping recursion at %s. No sub elements.", currKey)
     return
   }
 
@@ -73,8 +75,8 @@ func (n *node) walk(elemList *[]RadixTreeEntry) {
   sort.Sort(keys)
 
   for _, key := range keys {
-    log.Tracef("Recursing to %c", key)
-    n.subtrees[key].walk(elemList)
+    log.Debugf("Recursing to %s%c", currKey, key)
+    n.subtrees[key].walk(elemList, currKey)
   }
 }
 
@@ -159,9 +161,15 @@ func (n *node) find(key []byte, extend bool) (elem *node, ok bool) {
         elem = new(node)
         elem.Init(N.Key[i:])
         elem.Value = N.Value
+        // Copy the current subtree to the split value
+        for subtree, val := range N.subtrees {
+          elem.subtrees[subtree] = val
+        }
+
+        // Delete the old value *and subkeys*
         N.Value = nil
 
-        N.subtrees[N.Key[i]] = elem
+        N.subtrees = map[byte]*node{N.Key[i]: elem}
         N.Key = N.Key[:i]
       }
 
